@@ -231,7 +231,7 @@ function SegmentReportView({
               {has("tren") && (
                 <div className={`min-w-0 ${has("prioritas") ? "lg:col-span-5" : "lg:col-span-12"}`}>
                   <Block title="Index per minggu" description="Satu titik mewakili satu minggu (Senin sampai Minggu).">
-                    <div className="card px-3 pt-5 pb-3 sm:px-4">
+                    <div className="card min-w-0 overflow-hidden px-3 pt-5 pb-3 sm:px-4">
                       <TrendPlot points={report.trend} height={300} />
                     </div>
                   </Block>
@@ -273,7 +273,7 @@ function SegmentReportView({
 
 function Block({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 gap-4">
       <SectionTitle title={title} description={description} />
       {children}
     </div>

@@ -9,14 +9,16 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
-  const format = params.get("format") === "xlsx" ? "xlsx" : "pdf";
+  const requested = params.get("format");
+  const format = requested === "xlsx" ? "xlsx" : "pdf";
+  const landscape = requested === "pdf-landscape";
   const scope = parseScope(params);
 
   try {
     const data = await getDashboardData();
-    const body = format === "xlsx" ? await buildExcel(data, scope) : buildPdf(data, scope);
+    const body = format === "xlsx" ? await buildExcel(data, scope) : buildPdf(data, scope, landscape ? "landscape" : "portrait");
     const stamp = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta" }).format(new Date(data.fetchedAt));
-    const name = `JOUMPA-CSS-Survey-${scope.segments.map((s) => SEGMENT_META[s].label).join("-")}-${stamp}.${format}`;
+    const name = `JOUMPA-CSS-Survey-${scope.segments.map((s) => SEGMENT_META[s].label).join("-")}-${stamp}${landscape ? "-Slide" : ""}.${format}`;
     return new Response(new Uint8Array(body), {
       headers: {
         "Content-Type":

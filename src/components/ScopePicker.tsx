@@ -67,6 +67,7 @@ export function ScopePicker({
             return (
               <label key={c.key} className="flex min-h-9 cursor-pointer items-center gap-2.5 text-sm text-ink">
                 <input
+                  name={`report-content-${c.key}`}
                   type="checkbox"
                   checked={checked}
                   disabled={checked && value.content.length === 1}
@@ -117,6 +118,7 @@ function SegmentFilters({
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
         <MiniSelect
+          name={`${seg}-period`}
           label="Periode"
           value={filters.month}
           onChange={(v) => onChange("month", v)}
@@ -124,6 +126,7 @@ function SegmentFilters({
           options={options.months.map((m) => ({ value: m, label: formatMonth(m) }))}
         />
         <MiniSelect
+          name={`${seg}-station`}
           label="Bandara"
           value={filters.station}
           onChange={(v) => onChange("station", v)}
@@ -131,6 +134,7 @@ function SegmentFilters({
           options={options.stations.map((s) => ({ value: s, label: stationLabel(s, data.airports) }))}
         />
         <MiniSelect
+          name={`${seg}-service`}
           label="Jenis layanan"
           value={filters.service}
           onChange={(v) => onChange("service", v)}
@@ -143,12 +147,14 @@ function SegmentFilters({
 }
 
 function MiniSelect({
+  name,
   label,
   value,
   onChange,
   options,
   allLabel,
 }: {
+  name: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -158,7 +164,12 @@ function MiniSelect({
   return (
     <label className="flex min-w-0 flex-col gap-1">
       <span className="text-[11px] font-medium text-muted">{label}</span>
-      <select className="select !min-h-9 !py-1.5 !text-[13px]" value={value} onChange={(e) => onChange(e.target.value)}>
+      <select
+        name={name}
+        className="select !min-h-9 !py-1.5 !text-[13px]"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
         <option value="">{allLabel}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>

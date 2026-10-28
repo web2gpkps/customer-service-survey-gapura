@@ -106,6 +106,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
             </button>
             <button
               onClick={() => setDialog("export")}
+              aria-label="Export data"
               className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-line-strong bg-card px-3 text-sm font-semibold text-ink transition-colors hover:border-ink-2"
             >
               <Download aria-hidden className="size-4" />
@@ -173,6 +174,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
       <div className="sticky top-0 z-30 border-b border-line bg-page/90 backdrop-blur supports-[backdrop-filter]:bg-page/80">
         <div className="mx-auto flex max-w-[1320px] flex-wrap items-end gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <FilterSelect
+            name="dashboard-period"
             label="Periode"
             value={f.month}
             onChange={(v) => setFilter("month", v)}
@@ -180,6 +182,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
             options={options.months.map((m) => ({ value: m, label: formatMonth(m) }))}
           />
           <FilterSelect
+            name="dashboard-station"
             label="Bandara"
             value={f.station}
             onChange={(v) => setFilter("station", v)}
@@ -187,6 +190,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
             options={options.stations.map((s) => ({ value: s, label: stationLabel(s, data.airports) }))}
           />
           <FilterSelect
+            name="dashboard-service"
             label="Jenis layanan"
             value={f.service}
             onChange={(v) => setFilter("service", v)}
@@ -242,6 +246,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
 }
 
 function FilterSelect({
+  name,
   label,
   value,
   onChange,
@@ -249,6 +254,7 @@ function FilterSelect({
   allLabel,
   wide,
 }: {
+  name: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
@@ -259,7 +265,7 @@ function FilterSelect({
   return (
     <label className={`flex min-w-0 flex-1 basis-40 flex-col gap-1 ${wide ? "sm:max-w-80" : "sm:max-w-60"}`}>
       <span className="eyebrow">{label}</span>
-      <select className="select" value={value} onChange={(e) => onChange(e.target.value)}>
+      <select name={name} className="select" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{allLabel}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>

@@ -61,7 +61,7 @@ export function TrendPlot({ points, height = 260 }: { points: Point[]; height?: 
             Grafik ini muncul setelah ada data dari minimal dua minggu.
           </p>
         ) : (
-          <div ref={ref} className="relative" onMouseLeave={() => setHover(null)}>
+          <div ref={ref} className="relative min-w-0 overflow-hidden" onMouseLeave={() => setHover(null)}>
             {width > 0 && (
               <svg width={width} height={H} role="img" aria-label="Grafik tren index kepuasan mingguan">
                 {ticks.map((t) => (

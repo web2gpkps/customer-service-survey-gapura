@@ -85,7 +85,7 @@ export function parseScope(sp: Record<string, string | string[] | undefined> | U
   };
 }
 
-export type ExportFormat = "pdf" | "xlsx";
+export type ExportFormat = "pdf" | "pdf-landscape" | "xlsx";
 
 export const exportUrl = (scope: ReportScope, format: ExportFormat) =>
   `/api/export?format=${format}&${scopeToSearch(scope)}`;

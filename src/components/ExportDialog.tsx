@@ -1,6 +1,6 @@
 "use client";
 
-import { FileSpreadsheet, FileText } from "lucide-react";
+import { FileSpreadsheet, FileText, Presentation } from "lucide-react";
 import { exportUrl, type ReportScope } from "@/lib/filters";
 import type { DashboardData } from "@/lib/sheets";
 import { Modal, ScopePicker, useScopeState } from "./ScopePicker";
@@ -47,6 +47,13 @@ export function ExportButtons({ scope, compact = false }: { scope: ReportScope; 
         <span>
           PDF
           <span className="ml-1.5 font-normal text-muted">laporan index</span>
+        </span>
+      </a>
+      <a href={exportUrl(scope, "pdf-landscape")} download className={cls}>
+        <Presentation aria-hidden className="size-4 text-crit" />
+        <span>
+          PDF
+          <span className="ml-1.5 font-normal text-muted">slide landscape</span>
         </span>
       </a>
       <a href={exportUrl(scope, "xlsx")} download className={cls}>
