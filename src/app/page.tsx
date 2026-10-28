@@ -10,6 +10,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
     const data = await getDashboardData();
     return <Dashboard data={toClientData(data)} initialTab={tab === "b2b" ? "b2b" : "b2c"} />;
   } catch (err) {
+    console.error("Gagal memuat data dashboard:", err);
     return <LoadError message={err instanceof Error ? err.message : String(err)} />;
   }
 }

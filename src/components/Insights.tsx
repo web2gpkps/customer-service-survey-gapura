@@ -79,7 +79,7 @@ function countBy(values: string[]) {
   return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
-type ProfileKey = "service" | "channel" | "station";
+type ProfileKey = "station" | "service" | "channel" | "institution";
 
 export function Profile({
   meta,
@@ -90,12 +90,20 @@ export function Profile({
   responses: Response[];
   airports: Record<string, string>;
 }) {
-  const [key, setKey] = useState<ProfileKey>("service");
+  const [key, setKey] = useState<ProfileKey>("station");
+  const [showAll, setShowAll] = useState(false);
   const rows = useMemo(() => {
     if (key === "service") return countBy(responses.flatMap((r) => r.services));
     if (key === "channel") return countBy(responses.flatMap((r) => r.channels));
+    if (key === "institution") return countBy(responses.map((r) => r.institution));
     return countBy(responses.map((r) => r.station));
   }, [key, responses]);
+  const dimensions: { value: ProfileKey; label: string }[] = [
+    { value: "station", label: "Bandara" },
+    { value: "service", label: "Layanan" },
+    { value: "channel", label: "Kanal" },
+    ...(meta.id === "b2b" ? [{ value: "institution" as const, label: "Instansi" }] : []),
+  ];
   const max = Math.max(1, ...rows.map((r) => r[1]));
   const issues = responses.filter((r) => r.hadIssue).length;
   const answeredIssue = responses.filter((r) => r.hadIssue !== null).length;
@@ -105,21 +113,27 @@ export function Profile({
       <CardHeader
         eyebrow="Profil responden"
         title={`${meta.audience} yang mengisi survei`}
+        description={
+          rows.length > 8 && (
+            <button onClick={() => setShowAll((v) => !v)} className="font-semibold text-brand hover:underline">
+              {showAll ? "Tampilkan lebih sedikit" : `Tampilkan semua (${rows.length})`}
+            </button>
+          )
+        }
         action={
           <Segmented
             label="Dimensi profil"
             value={key}
-            onChange={setKey}
-            options={[
-              { value: "service", label: "Layanan" },
-              { value: "channel", label: "Kanal" },
-              { value: "station", label: "Bandara" },
-            ]}
+            onChange={(v) => {
+              setKey(v);
+              setShowAll(false);
+            }}
+            options={dimensions}
           />
         }
       />
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 px-5 py-4 sm:px-6">
-        {rows.slice(0, 8).map(([label, count]) => (
+        {(showAll ? rows : rows.slice(0, 8)).map(([label, count]) => (
           <li key={label}>
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="min-w-0 truncate text-ink" title={label}>
@@ -142,9 +156,16 @@ export function Profile({
             </div>
           </li>
         ))}
-        {rows.length > 8 && <li className="text-xs text-muted">+{rows.length - 8} lainnya</li>}
         {rows.length === 0 && <li className="text-sm text-muted">Kolom ini kosong di sheet.</li>}
       </ul>
+      {rows.length > 8 && (
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="min-h-11 w-full border-t border-line text-sm font-semibold text-brand hover:bg-brand-wash"
+        >
+          {showAll ? "Tampilkan lebih sedikit" : `Tampilkan semua (${rows.length})`}
+        </button>
+      )}
       {answeredIssue > 0 && (
         <p className="mx-5 mb-5 rounded-lg bg-sunken px-3 py-2.5 text-sm text-ink-2 sm:mx-6">
           <b className="num text-ink">{issues}</b> dari <span className="num">{answeredIssue}</span> responden (
@@ -156,7 +177,7 @@ export function Profile({
   );
 }
 
-/* ── Suara pelanggan ───────────────────────────────────────────── */
+/* ── Voice of Customer ───────────────────────────────────────────── */
 
 type VoiceKey = CommentKey;
 
@@ -169,8 +190,15 @@ export function Voices({ responses, airports }: { responses: Response[]; airport
   return (
     <section className="card flex h-full flex-col overflow-hidden">
       <CardHeader
-        eyebrow="Suara pelanggan"
-        title="Apa kata responden"
+        eyebrow="Voice of Customer"
+        title="Respondent Customer Feedback"
+        description={
+          items.length > 6 && (
+            <button onClick={() => setShowAll((v) => !v)} className="font-semibold text-brand hover:underline">
+              {showAll ? "Tampilkan lebih sedikit" : `Tampilkan semua (${items.length})`}
+            </button>
+          )
+        }
         action={
           <Segmented
             label="Jenis masukan"
@@ -269,8 +297,8 @@ export function Methodology({ label, sheet, overall }: { label?: string; sheet?:
                     <td className="px-3 py-3 font-semibold text-ink">
                       {c.label}
                       {isCurrent && label && (
-                        <span className="ml-2 rounded bg-ink px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">
-                          {label} SAAT INI
+                        <span className="ml-2 inline-block rounded bg-ink px-1.5 py-0.5 font-mono text-[10px] font-semibold whitespace-nowrap text-white">
+                          KPI CSS {label} Saat Ini
                         </span>
                       )}
                       <span className="mt-1.5 block sm:hidden">

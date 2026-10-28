@@ -8,13 +8,13 @@ import { buildSegmentReport, lowestStatements, pickComments, type SegmentReport 
 import { CATEGORIES, KPI_TARGET, categorize, formatIndex, meetsKpi, type StatusTone } from "../scoring";
 import type { ServerDashboardData } from "../sheets";
 
-type RGB = [number, number, number];
-const INK: RGB = [21, 25, 29];
-const INK2: RGB = [61, 67, 74];
-const MUTED: RGB = [100, 106, 113];
-const LINE: RGB = [226, 224, 216];
-const SUNKEN: RGB = [243, 242, 238];
-const TONE: Record<StatusTone, { text: RGB; fill: RGB }> = {
+export type RGB = [number, number, number];
+export const INK: RGB = [21, 25, 29];
+export const INK2: RGB = [61, 67, 74];
+export const MUTED: RGB = [100, 106, 113];
+export const LINE: RGB = [226, 224, 216];
+export const SUNKEN: RGB = [243, 242, 238];
+export const TONE: Record<StatusTone, { text: RGB; fill: RGB }> = {
   good: { text: [11, 122, 59], fill: [230, 244, 234] },
   warning: { text: [138, 83, 0], fill: [253, 241, 216] },
   critical: { text: [180, 35, 24], fill: [253, 236, 235] },
@@ -29,7 +29,7 @@ const PAGE_SIZE: Record<PdfLayout, { w: number; h: number; scale: number }> = {
 };
 
 /** Font standar PDF hanya mengenal WinAnsi; ganti karakter di luar itu. */
-function t(s: string): string {
+export function t(s: string): string {
   return s
     .replace(/[−‒]/g, "-")
     .replace(/≥/g, ">=")
@@ -37,7 +37,7 @@ function t(s: string): string {
     .replace(/[^\x00-\xFF–—‘’“”•…€™]/g, "");
 }
 
-function loadLogo(): string | null {
+export function loadLogo(): string | null {
   try {
     const file = path.join(/*turbopackIgnore: true*/ process.cwd(), "public", "logo-gapura.png");
     return `data:image/png;base64,${readFileSync(file).toString("base64")}`;

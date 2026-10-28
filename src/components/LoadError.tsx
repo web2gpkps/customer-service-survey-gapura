@@ -9,9 +9,13 @@ export function LoadError({ message }: { message: string }) {
           <code className="font-mono">GOOGLE_SHEET_ID</code> di file <code className="font-mono">.env</code>. Spreadsheet
           juga harus sudah dibagikan ke email service account.
         </p>
-        <pre className="mt-4 overflow-x-auto rounded-lg bg-crit-wash p-3 font-mono text-xs whitespace-pre-wrap text-crit">
-          {message}
-        </pre>
+        {process.env.NODE_ENV !== "production" ? (
+          <pre className="mt-4 overflow-x-auto rounded-lg bg-crit-wash p-3 font-mono text-xs whitespace-pre-wrap text-crit">
+            {message}
+          </pre>
+        ) : (
+          <p className="mt-4 text-sm text-muted">Coba muat ulang beberapa saat lagi. Jika terus berulang, hubungi pengelola dashboard.</p>
+        )}
       </div>
     </main>
   );

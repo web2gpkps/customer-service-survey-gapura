@@ -44,6 +44,12 @@ export function stationLabel(code: string, airports: Record<string, string>) {
 
 
 export function describeFilters(f: Filters, airports: Record<string, string>): string {
-  const parts = [f.month && formatMonth(f.month), f.station && stationLabel(f.station, airports), f.service].filter(Boolean);
+  const parts = [
+    f.month.length && f.month.map(formatMonth).join(", "),
+    f.station.length && f.station.map((s) => stationLabel(s, airports)).join(", "),
+    f.service.length && f.service.join(", "),
+    f.institution.length && f.institution.join(", "),
+    f.kpi.length === 1 && (f.kpi[0] === "met" ? "Memenuhi standar KPI" : "Belum memenuhi standar KPI"),
+  ].filter(Boolean);
   return parts.length ? parts.join(" · ") : "Semua periode, bandara, dan layanan";
 }

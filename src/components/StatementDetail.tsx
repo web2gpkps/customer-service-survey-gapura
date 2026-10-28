@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { categorize, formatIndex, type StatementResult, type SurveyResult } from "@/lib/scoring";
-import { CardHeader, StatusBadge, toneText } from "./ui";
+import { categorize, formatIndex, type StatementResult } from "@/lib/scoring";
+import { toneText } from "./ui";
 
 export const LIKERT = [
   { score: 1, label: "Sangat Tidak Puas", color: "bg-lk1" },
@@ -24,73 +22,6 @@ export function LikertLegend({ className = "" }: { className?: string }) {
         </span>
       ))}
     </div>
-  );
-}
-
-export function StatementDetail({ result }: { result: SurveyResult }) {
-  const [open, setOpen] = useState<Set<string>>(() => new Set([result.sections[0]?.code]));
-  const allOpen = open.size === result.sections.length;
-
-  const toggle = (code: string) =>
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(code)) next.delete(code);
-      else next.add(code);
-      return next;
-    });
-
-  return (
-    <section className="card">
-      <CardHeader
-        eyebrow="Per pernyataan"
-        title="Rincian skor tiap pernyataan"
-        description="Jumlah responden yang memilih skor 1 sampai 5, lalu index dan kategorinya."
-        action={
-          <button
-            onClick={() => setOpen(allOpen ? new Set() : new Set(result.sections.map((s) => s.code)))}
-            className="min-h-9 rounded-lg border border-line-strong px-3 text-xs font-semibold text-ink hover:border-ink-2"
-          >
-            {allOpen ? "Tutup semua" : "Buka semua"}
-          </button>
-        }
-      />
-      <LikertLegend className="border-b border-line bg-sunken px-5 py-3 sm:px-6" />
-
-      <div>
-        {result.sections.map((s) => {
-          const c = categorize(s.index);
-          const isOpen = open.has(s.code);
-          return (
-            <div key={s.code} className="border-b border-line last:border-b-0">
-              <button
-                onClick={() => toggle(s.code)}
-                aria-expanded={isOpen}
-                className="flex w-full items-center gap-3 px-5 py-3.5 text-left hover:bg-sunken/70 sm:px-6"
-              >
-                <ChevronDown
-                  aria-hidden
-                  className={`size-4 shrink-0 text-muted transition-transform ${isOpen ? "" : "-rotate-90"}`}
-                />
-                <span className="grid size-6 shrink-0 place-items-center rounded-md bg-ink font-mono text-xs font-semibold text-white">
-                  {s.code}
-                </span>
-                <span className="min-w-0 flex-1 font-bold text-ink">{s.title}</span>
-                <span className="num hidden text-sm text-muted sm:inline">{s.statements.length} butir</span>
-                <span className="num w-12 text-right text-base font-extrabold text-ink">{formatIndex(s.index)}</span>
-                <span className="hidden md:inline">
-                  <StatusBadge category={c} />
-                </span>
-              </button>
-              {isOpen && (
-                <div className="border-t border-line">
-                  <StatementList statements={s.statements} />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 

@@ -13,6 +13,9 @@ const BRAND_WASH = "FFE8F4ED";
 const STATUS_FILL = { good: "FFE6F4EA", warning: "FFFDF1D8", critical: "FFFDECEB" } as const;
 const STATUS_TEXT = { good: "FF0B7A3B", warning: "FF8A5300", critical: "FFB42318" } as const;
 
+/** Header kolom berisi data pribadi responden. Sengaja tidak mencakup "Telepon" agar kolom kanal tidak ikut terhapus. */
+const PERSONAL_DATA_HEADER = /nama penumpang|nomor\s*hp|\bno\.?\s*hp\b|whatsapp|^\d+\.\s*(alamat\s*)?e-?mail\b/i;
+
 /** 0 → "A", 26 → "AA". */
 function colLetter(i: number): string {
   let s = "";
@@ -40,11 +43,13 @@ export async function buildExcel(data: ServerDashboardData, scope: ReportScope):
     const segment = data.segments[seg];
     const report = buildSegmentReport(data, seg, scope.filters[seg]);
     const ws = wb.addWorksheet(segment.sheet, { views: [{ state: "frozen", ySplit: 1 }] });
-    ws.addRow(segment.headers);
+    // Kolom data pribadi (nama, no. HP, email) dikosongkan; posisi kolom tetap agar rumus rekap valid.
+    const personal = segment.headers.map((h) => PERSONAL_DATA_HEADER.test(h));
+    ws.addRow(segment.headers.map((h, c) => (personal[c] ? "[data pribadi tidak diekspor]" : h)));
     const rows = report.responses.map((r) => r.rowIndex).sort((a, b) => a - b);
     for (const i of rows) {
       const raw = segment.rows[i] ?? [];
-      ws.addRow(segment.headers.map((_, c) => cellValue(raw[c]?.trim() ? raw[c] : undefined)));
+      ws.addRow(segment.headers.map((_, c) => (personal[c] ? null : cellValue(raw[c]?.trim() ? raw[c] : undefined))));
     }
     ws.columns.forEach((col, i) => {
       col.width = Math.min(40, Math.max(12, (segment.headers[i] ?? "").length > 60 ? 28 : 16));

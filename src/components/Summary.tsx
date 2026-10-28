@@ -4,9 +4,11 @@ import {
   formatIndex,
   meetsKpi,
   type NpsResult,
+  type Response,
   type SurveyResult,
 } from "@/lib/scoring";
 import type { SegmentMeta } from "@/lib/survey-config";
+import { NpsDetailButton } from "./NpsDetail";
 import { StatusBadge, toneMark, toneText } from "./ui";
 
 const pos = (v: number) => `${((Math.min(Math.max(v, 1), 5) - 1) / 4) * 100}%`;
@@ -121,11 +123,15 @@ export function SummaryTiles({
   meta,
   result,
   nps,
+  responses,
+  airports,
   className = "",
 }: {
   meta: SegmentMeta;
   result: SurveyResult;
   nps: NpsResult;
+  responses?: Response[];
+  airports?: Record<string, string>;
   className?: string;
 }) {
   const sectionsMet = result.sections.filter((s) => meetsKpi(s.index)).length;
@@ -134,7 +140,7 @@ export function SummaryTiles({
   const statementsBelow = statements.filter((s) => !meetsKpi(s.index)).length;
 
   return (
-    <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${className}`}>
+    <div className={`grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:gap-4 ${className}`}>
       <Tile
         label="Responden"
         value={result.respondents.toLocaleString("id-ID")}
@@ -181,8 +187,21 @@ export function SummaryTiles({
         value={nps.score === null ? "–" : nps.score > 0 ? `+${nps.score}` : String(nps.score)}
         note={
           nps.n ? (
-            <span className="num">
-              Dari {nps.n} jawaban: {nps.promoters} promotor, {nps.passives} pasif, {nps.detractors} detraktor
+            <span className="num block">
+              Dari {nps.n} jawaban:
+              <span className="mt-1 block space-y-0.5">
+                <span className="block">
+                  <b className="text-ink">{nps.promoters}</b> promotor (skor 9–10) · sangat puas, mau merekomendasikan
+                </span>
+                <span className="block">
+                  <b className="text-ink">{nps.passives}</b> pasif (skor 7–8) · puas tapi biasa saja
+                </span>
+                <span className="block">
+                  <b className="text-ink">{nps.detractors}</b> detraktor (skor 0–6) · kurang puas, berisiko tidak
+                  merekomendasikan
+                </span>
+              </span>
+              {responses && airports && <NpsDetailButton responses={responses} airports={airports} segment={meta.id} />}
             </span>
           ) : (
             "Belum ada yang menjawab"

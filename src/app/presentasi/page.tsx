@@ -21,6 +21,7 @@ export default async function PresentasiPage({
     const data = await getDashboardData();
     return <Presentation data={toClientData(data)} query={query} />;
   } catch (err) {
+    console.error("Gagal memuat data presentasi:", err);
     return <LoadError message={err instanceof Error ? err.message : String(err)} />;
   }
 }

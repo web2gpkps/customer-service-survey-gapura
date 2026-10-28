@@ -62,6 +62,7 @@ export interface Response {
   services: string[];
   channels: string[];
   station: string; // kode bandara, mis. CGK
+  institution: string; // nama instansi/perusahaan (hanya B2B), kosong bila tidak ada
   hadIssue: boolean | null;
   nps: number | null;
   scores: (number | null)[]; // urut sesuai statement pada SectionDef[] segmen ini
@@ -173,6 +174,40 @@ export function computeNps(responses: Response[]): NpsResult {
   }
   const n = promoters + passives + detractors;
   return { score: n ? Math.round(((promoters - detractors) / n) * 100) : null, promoters, passives, detractors, n };
+}
+
+export interface NpsRow extends NpsResult {
+  /** Kunci pengelompokan (huruf kecil), dipakai untuk mencocokkan responden ke baris ini. */
+  id: string;
+  label: string;
+}
+
+export const npsGroupId = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * Rincian NPS per kelompok (bandara, jenis layanan, atau instansi). `keysOf` mengembalikan nilai kelompok sebuah
+ * responden; jenis layanan boleh lebih dari satu, jadi satu responden bisa masuk ke beberapa baris.
+ * Penulisan yang hanya beda huruf besar/kecil digabung; nilai kosong jadi "Tidak diisi".
+ */
+export function npsBreakdown(responses: Response[], keysOf: (r: Response) => string[]): NpsRow[] {
+  const groups = new Map<string, { spellings: Map<string, number>; items: Response[] }>();
+  for (const r of responses) {
+    if (r.nps === null) continue;
+    const keys = keysOf(r).map((k) => k.trim().replace(/\s+/g, " "));
+    for (const raw of keys.length ? [...new Set(keys)] : [""]) {
+      const id = npsGroupId(raw);
+      const group = groups.get(id) ?? { spellings: new Map<string, number>(), items: [] as Response[] };
+      group.spellings.set(raw, (group.spellings.get(raw) ?? 0) + 1);
+      group.items.push(r);
+      groups.set(id, group);
+    }
+  }
+  return [...groups.entries()]
+    .map(([id, { spellings, items }]) => {
+      const label = id === "" ? "Tidak diisi" : [...spellings.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      return { id, label, ...computeNps(items) };
+    })
+    .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
 }
 
 /** Index keseluruhan per minggu (Senin–Minggu) untuk grafik tren. */

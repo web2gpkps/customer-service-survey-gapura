@@ -38,7 +38,11 @@ export function toClientData(data: ServerDashboardData): DashboardData {
 
 let cache: { at: number; data: ServerDashboardData } | null = null;
 
+const MIN_REFRESH_INTERVAL_MS = 15_000;
+
+/** Cache yang masih berumur < 15 detik dipertahankan agar muat ulang berulang tidak menghabiskan kuota API. */
 export function clearSheetCache() {
+  if (cache && Date.now() - cache.at < MIN_REFRESH_INTERVAL_MS) return;
   cache = null;
 }
 
@@ -62,7 +66,7 @@ async function fetchDashboardData(): Promise<ServerDashboardData> {
 
   // Helper_Kode_Cabang hanya untuk nama bandara; dashboard tetap jalan tanpanya.
   const metaRes = await fetch(`${base}?fields=sheets.properties.title`, { headers, cache: "no-store" });
-  if (!metaRes.ok) throw new Error(`Google Sheets API ${metaRes.status}: ${(await metaRes.text()).slice(0, 300)}`);
+  if (!metaRes.ok) throw new Error(`Google Sheets API ${metaRes.status}`);
   const titles = new Set(
     ((await metaRes.json()) as { sheets: { properties: { title: string } }[] }).sheets.map((s) => s.properties.title),
   );
@@ -76,7 +80,7 @@ async function fetchDashboardData(): Promise<ServerDashboardData> {
   url.searchParams.set("valueRenderOption", "FORMATTED_VALUE");
 
   const res = await fetch(url, { headers, cache: "no-store" });
-  if (!res.ok) throw new Error(`Google Sheets API ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) throw new Error(`Google Sheets API ${res.status}`);
   const json = (await res.json()) as { valueRanges: { values?: string[][] }[] };
   const [b2cRows, b2bRows, airportRows = []] = json.valueRanges.map((v) => v.values ?? []);
 
@@ -201,6 +205,7 @@ function parseSegment(segment: Segment, rows: string[][]): ServerSegmentData {
     service: findColumns(headers, /jenis layanan joumpa[^()]*:\s*$/i),
     channel: findColumns(headers, /^\d+\.\s*kanal [^()]*:\s*$/i),
     station: findColumns(headers, /^\d+\.\s*(bandara|station)/i),
+    institution: findColumns(headers, /nama instansi\/perusahaan/i),
     issue: findColumns(headers, /mengalami kendala/i),
     nps: findColumns(headers, /seberapa besar kemungkinan/i),
     best: findColumns(headers, /paling berkesan/i),
@@ -226,6 +231,7 @@ function parseSegment(segment: Segment, rows: string[][]): ServerSegmentData {
       services: splitList(firstValue(row, col.service)),
       channels: splitList(firstValue(row, col.channel)),
       station: parseStation(firstValue(row, col.station)),
+      institution: firstValue(row, col.institution),
       hadIssue: issue ? /^ya/i.test(issue) : null,
       nps,
       scores,

@@ -2,13 +2,26 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { Download, RefreshCw, RotateCcw, Share2 } from "lucide-react";
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { Download, Presentation, RefreshCw, RotateCcw, Share2 } from "lucide-react";
 import { refreshData } from "@/app/actions";
-import { ALL_CONTENT, EMPTY_FILTERS, applyFilters, hasFilters, type Filters, type ReportScope } from "@/lib/filters";
+import {
+  ALL_CONTENT,
+  EMPTY_FILTERS,
+  KPI_OPTIONS,
+  applyFilters,
+  hasFilters,
+  institutionOptions,
+  type Filters,
+  type KpiValue,
+  type ReportScope,
+} from "@/lib/filters";
+import { buildSegmentReport } from "@/lib/report";
 import { categorize, computeSurvey, formatIndex } from "@/lib/scoring";
 import type { DashboardData } from "@/lib/sheets";
 import { SEGMENT_IDS, SEGMENT_META, type Segment } from "@/lib/survey-config";
+import { MultiSelect } from "./MultiSelect";
+import { PresentationMode } from "./PresentationMode";
 import { SegmentView } from "./SegmentView";
 import { ExportDialog } from "./ExportDialog";
 import { ShareDialog } from "./ShareDialog";
@@ -22,6 +35,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
   const [tab, setTab] = useState<Segment>(initialTab);
   const [filters, setFilters] = useState<Record<Segment, Filters>>({ b2c: EMPTY_FILTERS, b2b: EMPTY_FILTERS });
   const [dialog, setDialog] = useState<"share" | "export" | null>(null);
+  const [presenting, setPresenting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
   useAutoRefresh(AUTO_REFRESH_MS);
 
@@ -36,6 +50,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
       months: [...new Set(all.map((r) => r.date.slice(0, 7)))].filter(Boolean).sort().reverse(),
       stations: [...new Set(all.map((r) => r.station))].filter(Boolean).sort(),
       services: [...new Set(all.flatMap((r) => r.services))].sort(),
+      institutions: institutionOptions(all),
     };
   }, [segment.responses]);
 
@@ -50,6 +65,17 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
     [data, filters],
   );
 
+  const filterText = useMemo(
+    () => (presenting ? buildSegmentReport(data, tab, f).filterText : ""),
+    [presenting, data, tab, f],
+  );
+  const closePresenting = useCallback(() => setPresenting(false), []);
+  // Harus dipanggil langsung dari klik pengguna agar browser mengizinkan layar penuh.
+  const startPresenting = () => {
+    setPresenting(true);
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+
   const selectTab = (id: Segment) => {
     setTab(id);
     const url = new URL(window.location.href);
@@ -58,7 +84,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
     window.history.replaceState(null, "", url);
   };
 
-  const setFilter = (key: keyof Filters, value: string) =>
+  const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((prev) => ({ ...prev, [tab]: { ...prev[tab], [key]: value } }));
 
   const currentScope = (): ReportScope => ({ segments: [tab], filters, content: [...ALL_CONTENT] });
@@ -86,7 +112,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <p className="mr-1 text-right text-xs leading-snug text-muted">
-              Data Google Sheets
+              Data Realtime
               <br />
               <span className="font-medium text-ink-2">per {formatDateTime(data.fetchedAt)}</span>
             </p>
@@ -103,6 +129,14 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
             >
               <RefreshCw aria-hidden className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
               <span className="hidden lg:inline">{refreshing ? "Memuat…" : "Muat ulang"}</span>
+            </button>
+            <button
+              onClick={startPresenting}
+              aria-label="Mulai mode presentasi"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-line-strong bg-card px-3 text-sm font-semibold text-ink transition-colors hover:border-ink-2"
+            >
+              <Presentation aria-hidden className="size-4" />
+              <span className="hidden sm:inline">Presentasi</span>
             </button>
             <button
               onClick={() => setDialog("export")}
@@ -173,30 +207,47 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
 
       <div className="sticky top-0 z-30 border-b border-line bg-page/90 backdrop-blur supports-[backdrop-filter]:bg-page/80">
         <div className="mx-auto flex max-w-[1320px] flex-wrap items-end gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <FilterSelect
-            name="dashboard-period"
+          <MultiSelect
             label="Periode"
-            value={f.month}
+            values={f.month}
             onChange={(v) => setFilter("month", v)}
             allLabel="Semua periode"
             options={options.months.map((m) => ({ value: m, label: formatMonth(m) }))}
+            className="flex-1 basis-40 sm:max-w-60"
           />
-          <FilterSelect
-            name="dashboard-station"
+          <MultiSelect
             label="Bandara"
-            value={f.station}
+            values={f.station}
             onChange={(v) => setFilter("station", v)}
             allLabel="Semua bandara"
             options={options.stations.map((s) => ({ value: s, label: stationLabel(s, data.airports) }))}
+            className="flex-1 basis-40 sm:max-w-60"
           />
-          <FilterSelect
-            name="dashboard-service"
+          <MultiSelect
             label="Jenis layanan"
-            value={f.service}
+            values={f.service}
             onChange={(v) => setFilter("service", v)}
             allLabel="Semua layanan"
             options={options.services.map((s) => ({ value: s, label: s }))}
-            wide
+            className="flex-1 basis-40 sm:max-w-80"
+          />
+          {tab === "b2b" && options.institutions.length > 0 && (
+            <MultiSelect
+              label="Instansi"
+              values={f.institution}
+              onChange={(v) => setFilter("institution", v)}
+              allLabel="Semua instansi"
+              options={options.institutions}
+              className="flex-1 basis-40 sm:max-w-80"
+            />
+          )}
+          <MultiSelect
+            label="KPI"
+            values={f.kpi}
+            onChange={(v) => setFilter("kpi", v as KpiValue[])}
+            allLabel="Semua status KPI"
+            options={KPI_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            className="flex-1 basis-40 sm:max-w-72"
           />
           <div className="flex min-h-10 items-center gap-3 sm:ml-auto">
             <p className="text-sm text-muted" aria-live="polite">
@@ -222,7 +273,7 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
         className="mx-auto max-w-[1320px] px-4 pt-6 pb-16 sm:px-6 lg:px-8"
       >
         <SegmentView
-          key={`${tab}-${f.month}-${f.station}-${f.service}`}
+          key={`${tab}-${JSON.stringify(f)}`}
           meta={meta}
           sheet={segment.sheet}
           sections={segment.sections}
@@ -239,40 +290,18 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
         </div>
       </footer>
 
+      {presenting && (
+        <PresentationMode
+          meta={meta}
+          sections={segment.sections}
+          responses={filtered}
+          airports={data.airports}
+          filterText={filterText}
+          onClose={closePresenting}
+        />
+      )}
       <ShareDialog open={dialog === "share"} onClose={() => setDialog(null)} data={data} initialScope={currentScope} />
       <ExportDialog open={dialog === "export"} onClose={() => setDialog(null)} data={data} initialScope={currentScope} />
     </div>
-  );
-}
-
-function FilterSelect({
-  name,
-  label,
-  value,
-  onChange,
-  options,
-  allLabel,
-  wide,
-}: {
-  name: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-  allLabel: string;
-  wide?: boolean;
-}) {
-  return (
-    <label className={`flex min-w-0 flex-1 basis-40 flex-col gap-1 ${wide ? "sm:max-w-80" : "sm:max-w-60"}`}>
-      <span className="eyebrow">{label}</span>
-      <select name={name} className="select" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{allLabel}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }

@@ -2,9 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
-import { CONTENT_OPTIONS, applyFilters, type ContentKey, type Filters, type ReportScope } from "@/lib/filters";
+import {
+  CONTENT_OPTIONS,
+  KPI_OPTIONS,
+  applyFilters,
+  institutionOptions,
+  type ContentKey,
+  type Filters,
+  type KpiValue,
+  type ReportScope,
+} from "@/lib/filters";
 import type { DashboardData } from "@/lib/sheets";
 import { SEGMENT_IDS, SEGMENT_META, type Segment } from "@/lib/survey-config";
+import { MultiSelect } from "./MultiSelect";
 import { Segmented, formatMonth, stationLabel } from "./ui";
 
 /** Pilihan segmen, filter per segmen, dan konten laporan. */
@@ -21,7 +31,7 @@ export function ScopePicker({
 }) {
   const scopeKey = value.segments.length === 2 ? "all" : value.segments[0];
 
-  const setFilter = (seg: Segment, key: keyof Filters, v: string) =>
+  const setFilter = <K extends keyof Filters>(seg: Segment, key: K, v: Filters[K]) =>
     onChange({ ...value, filters: { ...value.filters, [seg]: { ...value.filters[seg], [key]: v } } });
 
   const toggleContent = (key: ContentKey) => {
@@ -94,7 +104,7 @@ function SegmentFilters({
   seg: Segment;
   data: DashboardData;
   filters: Filters;
-  onChange: (key: keyof Filters, v: string) => void;
+  onChange: <K extends keyof Filters>(key: K, v: Filters[K]) => void;
 }) {
   const all = data.segments[seg].responses;
   const options = useMemo(
@@ -102,6 +112,7 @@ function SegmentFilters({
       months: [...new Set(all.map((r) => r.date.slice(0, 7)))].filter(Boolean).sort().reverse(),
       stations: [...new Set(all.map((r) => r.station))].filter(Boolean).sort(),
       services: [...new Set(all.flatMap((r) => r.services))].sort(),
+      institutions: institutionOptions(all),
     }),
     [all],
   );
@@ -117,67 +128,50 @@ function SegmentFilters({
         <span className={`num text-xs ${count ? "text-muted" : "font-semibold text-crit"}`}>{count} respons</span>
       </div>
       <div className="grid gap-2 sm:grid-cols-3">
-        <MiniSelect
-          name={`${seg}-period`}
+        <MultiSelect
+          compact
           label="Periode"
-          value={filters.month}
+          values={filters.month}
           onChange={(v) => onChange("month", v)}
           allLabel="Semua periode"
           options={options.months.map((m) => ({ value: m, label: formatMonth(m) }))}
         />
-        <MiniSelect
-          name={`${seg}-station`}
+        <MultiSelect
+          compact
           label="Bandara"
-          value={filters.station}
+          values={filters.station}
           onChange={(v) => onChange("station", v)}
           allLabel="Semua bandara"
           options={options.stations.map((s) => ({ value: s, label: stationLabel(s, data.airports) }))}
         />
-        <MiniSelect
-          name={`${seg}-service`}
+        <MultiSelect
+          compact
           label="Jenis layanan"
-          value={filters.service}
+          values={filters.service}
           onChange={(v) => onChange("service", v)}
           allLabel="Semua layanan"
           options={options.services.map((s) => ({ value: s, label: s }))}
         />
+        {seg === "b2b" && options.institutions.length > 0 && (
+          <MultiSelect
+            compact
+            label="Instansi"
+            values={filters.institution}
+            onChange={(v) => onChange("institution", v)}
+            allLabel="Semua instansi"
+            options={options.institutions}
+          />
+        )}
+        <MultiSelect
+          compact
+          label="KPI"
+          values={filters.kpi}
+          onChange={(v) => onChange("kpi", v as KpiValue[])}
+          allLabel="Semua status KPI"
+          options={KPI_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        />
       </div>
     </fieldset>
-  );
-}
-
-function MiniSelect({
-  name,
-  label,
-  value,
-  onChange,
-  options,
-  allLabel,
-}: {
-  name: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-  allLabel: string;
-}) {
-  return (
-    <label className="flex min-w-0 flex-col gap-1">
-      <span className="text-[11px] font-medium text-muted">{label}</span>
-      <select
-        name={name}
-        className="select !min-h-9 !py-1.5 !text-[13px]"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">{allLabel}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }
 
@@ -189,6 +183,7 @@ export function Modal({
   description,
   children,
   footer,
+  wide = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -196,6 +191,7 @@ export function Modal({
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -211,7 +207,7 @@ export function Modal({
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
       aria-label={title}
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[min(640px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-line bg-card p-0 text-ink shadow-2xl backdrop:bg-ink/40 backdrop:backdrop-blur-[2px] open:flex open:flex-col"
+      className={`m-auto max-h-[calc(100dvh-2rem)] ${wide ? "w-[min(980px,calc(100vw-2rem))]" : "w-[min(640px,calc(100vw-2rem))]"} overflow-hidden rounded-2xl border border-line bg-card p-0 text-ink shadow-2xl backdrop:bg-ink/40 backdrop:backdrop-blur-[2px] open:flex open:flex-col`}
     >
       <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
         <div>

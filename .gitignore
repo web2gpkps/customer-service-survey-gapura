@@ -10,3 +10,8 @@ next-env.d.ts
 # Local files
 *.xlsx
 /logo-gapura.webp
+
+# Lokal / rahasia
+.claude/
+https*.txt
+*.pdf
