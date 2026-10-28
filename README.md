@@ -12,7 +12,10 @@ npm run build && npm start   # mode produksi
 
 | Halaman | Isi |
 |---|---|
-| `/` | Dashboard. Tab B2C terbuka duluan, tab B2B lewat `/?tab=b2b`. |
+| `/` | Dashboard. Tab B2C terbuka duluan, tab B2B lewat `/?tab=b2b`. Perlu login admin. |
+| `/akses` | Share akses cabang (admin): dashboard yang sama plus target sampling semua cabang, dan tombol **Kelola link cabang**. |
+| `/akses/<token>` | Dashboard satu cabang dari link yang dibagikan. Tanpa login, hanya data cabang itu. |
+| `/login` | Login admin. |
 | `/presentasi` | Laporan satu halaman yang hanya bisa dibaca. Link-nya dibuat dari tombol **Bagikan**. |
 | `/api/export` | Unduh PDF (`format=pdf`) atau Excel (`format=xlsx`). |
 
@@ -22,6 +25,19 @@ Tombol **Bagikan** dan **Export** membuka pilihan yang sama: segmen (B2C, B2B, a
 /presentasi?segmen=b2c,b2b&b2b.bandara=CGK&konten=ringkasan,bagian
 /api/export?format=xlsx&segmen=b2c&b2c.periode=2026-09
 ```
+
+## Akses cabang
+
+Tombol **Share akses cabang** di sebelah **Bagikan** membuka `/akses`. Di sana Anda melihat target sampling per cabang (dari sheet `Target Sampling`) dan membuat link untuk tiap cabang lewat **Kelola link cabang**.
+
+- Link cabang hanya menampilkan dashboard dan target sampling cabang itu. Server hanya mengirim respons cabang tersebut, jadi cabang lain tidak ikut terkirim.
+- Pemegang link tidak bisa membuka halaman utama, export, atau `/akses`; semuanya meminta login admin.
+- Link bisa dimatikan, diaktifkan lagi, dan diberi masa berlaku (7, 30, 90 hari, atau tanpa batas). Perubahan berlaku dalam beberapa detik.
+- Daftar link disimpan di tab `Share Akses Cabang` pada spreadsheet yang sama. Tab dibuat otomatis saat link pertama dibuat. **Service account harus berstatus Editor** di spreadsheet (selain Viewer untuk membaca data).
+
+### Login admin
+
+Halaman utama, `/api/export`, dan `/akses` dikunci dengan password. Atur `ADMIN_PASSWORD` dan `AUTH_SECRET` di `.env` (dan di environment Vercel). Tanpa keduanya halaman admin tidak bisa dibuka. `/presentasi` dan link cabang tetap terbuka tanpa login.
 
 Dashboard mengambil ulang data tiap 2 menit selama halaman terbuka, laporan tiap 5 menit. Server menyimpan hasil ambil data selama 60 detik; tombol **Muat ulang** melewati simpanan itu.
 
@@ -41,6 +57,7 @@ Dashboard mengambil ulang data tiap 2 menit selama halaman terbuka, laporan tiap
 |---|---|
 | B2C | `B2C CSS Tally` (bisa diganti dengan env `SHEET_B2C`) |
 | B2B | `B2B CSS Tally` (bisa diganti dengan env `SHEET_B2B`) |
+| Target sampling | `Target Sampling` (bisa diganti dengan env `SHEET_SAMPLING`) |
 
 Nama bandara diambil dari sheet `Helper_Kode_Cabang` kalau ada. Kalau tidak ada, dashboard menampilkan kodenya saja.
 

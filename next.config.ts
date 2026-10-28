@@ -35,7 +35,25 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["google-auth-library", "exceljs", "jspdf", "jspdf-autotable"],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Token ada di URL: jangan bocor lewat Referer, jangan disimpan cache, jangan diindeks.
+      {
+        source: "/akses/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        source: "/login",
+        headers: [
+          { key: "Cache-Control", value: "no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+    ];
   },
 };
 

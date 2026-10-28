@@ -1,10 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { Download, Presentation, RefreshCw, RotateCcw, Share2 } from "lucide-react";
+import { ArrowLeft, Download, KeyRound, Link2, LogOut, Presentation, RefreshCw, RotateCcw, Share2 } from "lucide-react";
 import { refreshData } from "@/app/actions";
+import { logout } from "@/app/login/actions";
 import {
   ALL_CONTENT,
   EMPTY_FILTERS,
@@ -17,11 +19,15 @@ import {
   type ReportScope,
 } from "@/lib/filters";
 import { buildSegmentReport } from "@/lib/report";
+import type { SamplingData } from "@/lib/sampling";
+import type { ShareLink } from "@/lib/share-link-types";
 import { categorize, computeSurvey, formatIndex } from "@/lib/scoring";
 import type { DashboardData } from "@/lib/sheets";
 import { SEGMENT_IDS, SEGMENT_META, type Segment } from "@/lib/survey-config";
+import { LinkManager } from "./LinkManager";
 import { MultiSelect } from "./MultiSelect";
 import { PresentationMode } from "./PresentationMode";
+import { SamplingPanel } from "./SamplingPanel";
 import { SegmentView } from "./SegmentView";
 import { ExportDialog } from "./ExportDialog";
 import { ShareDialog } from "./ShareDialog";
@@ -30,11 +36,26 @@ import { useAutoRefresh } from "./useAutoRefresh";
 
 const AUTO_REFRESH_MS = 2 * 60_000;
 
-export function Dashboard({ data, initialTab }: { data: DashboardData; initialTab: Segment }) {
+/**
+ * Halaman "Share akses cabang". Tanpa prop ini Dashboard menjadi halaman utama.
+ * - admin: semua cabang, plus pengelolaan link
+ * - cabang: data sudah dipotong di server ke satu cabang; tanpa export, bagikan, atau tautan ke halaman utama
+ */
+export interface AksesProps {
+  mode: "admin" | "cabang";
+  sampling: SamplingData;
+  station?: string;
+  expiresAt?: string | null;
+  links?: ShareLink[];
+  stationOptions?: string[];
+}
+
+export function Dashboard({ data, initialTab, akses }: { data: DashboardData; initialTab: Segment; akses?: AksesProps }) {
+  const isCabang = akses?.mode === "cabang";
   const router = useRouter();
   const [tab, setTab] = useState<Segment>(initialTab);
   const [filters, setFilters] = useState<Record<Segment, Filters>>({ b2c: EMPTY_FILTERS, b2b: EMPTY_FILTERS });
-  const [dialog, setDialog] = useState<"share" | "export" | null>(null);
+  const [dialog, setDialog] = useState<"share" | "export" | "links" | null>(null);
   const [presenting, setPresenting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
   useAutoRefresh(AUTO_REFRESH_MS);
@@ -104,7 +125,13 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
             />
             <div className="h-10 w-px shrink-0 bg-line-strong" aria-hidden />
             <div className="min-w-0">
-              <p className="eyebrow">Survei kepuasan pelanggan · skala 1 sampai 5</p>
+              <p className="eyebrow">
+                {!akses
+                  ? "Survei kepuasan pelanggan · skala 1 sampai 5"
+                  : isCabang
+                    ? `Akses cabang · ${stationLabel(akses.station ?? "", data.airports)} · target sampling`
+                    : "Share akses cabang · target sampling"}
+              </p>
               <h1 className="text-lg leading-tight font-extrabold tracking-tight text-ink sm:text-2xl">
                 JOUMPA CSS SURVEY DASHBOARD
               </h1>
@@ -138,21 +165,62 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
               <Presentation aria-hidden className="size-4" />
               <span className="hidden sm:inline">Presentasi</span>
             </button>
-            <button
-              onClick={() => setDialog("export")}
-              aria-label="Export data"
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-line-strong bg-card px-3 text-sm font-semibold text-ink transition-colors hover:border-ink-2"
-            >
-              <Download aria-hidden className="size-4" />
-              <span className="hidden sm:inline">Export</span>
-            </button>
-            <button
-              onClick={() => setDialog("share")}
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white transition-colors hover:bg-brand-deep"
-            >
-              <Share2 aria-hidden className="size-4" />
-              Bagikan
-            </button>
+            {!akses && (
+              <>
+                <button
+                  onClick={() => setDialog("export")}
+                  aria-label="Export data"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-line-strong bg-card px-3 text-sm font-semibold text-ink transition-colors hover:border-ink-2"
+                >
+                  <Download aria-hidden className="size-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+                <button
+                  onClick={() => setDialog("share")}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white transition-colors hover:bg-brand-deep"
+                >
+                  <Share2 aria-hidden className="size-4" />
+                  Bagikan
+                </button>
+                <Link
+                  href="/akses"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-brand px-3.5 text-sm font-semibold text-brand transition-colors hover:bg-brand-wash"
+                >
+                  <KeyRound aria-hidden className="size-4" />
+                  <span className="hidden sm:inline">Share akses cabang</span>
+                  <span className="sm:hidden">Akses cabang</span>
+                </Link>
+              </>
+            )}
+            {!isCabang && (
+              <form action={logout}>
+                <button
+                  aria-label="Keluar dari admin"
+                  title="Keluar"
+                  className="grid min-h-10 w-10 place-items-center rounded-lg border border-line-strong bg-card text-ink-2 transition-colors hover:border-ink-2 hover:text-ink"
+                >
+                  <LogOut aria-hidden className="size-4" />
+                </button>
+              </form>
+            )}
+            {akses?.mode === "admin" && (
+              <>
+                <Link
+                  href="/"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-line-strong bg-card px-3 text-sm font-semibold text-ink transition-colors hover:border-ink-2"
+                >
+                  <ArrowLeft aria-hidden className="size-4" />
+                  <span className="hidden sm:inline">Dashboard utama</span>
+                </Link>
+                <button
+                  onClick={() => setDialog("links")}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white transition-colors hover:bg-brand-deep"
+                >
+                  <Link2 aria-hidden className="size-4" />
+                  Kelola link cabang
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -215,14 +283,16 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
             options={options.months.map((m) => ({ value: m, label: formatMonth(m) }))}
             className="flex-1 basis-40 sm:max-w-60"
           />
-          <MultiSelect
-            label="Bandara"
-            values={f.station}
-            onChange={(v) => setFilter("station", v)}
-            allLabel="Semua bandara"
-            options={options.stations.map((s) => ({ value: s, label: stationLabel(s, data.airports) }))}
-            className="flex-1 basis-40 sm:max-w-60"
-          />
+          {!isCabang && (
+            <MultiSelect
+              label="Bandara"
+              values={f.station}
+              onChange={(v) => setFilter("station", v)}
+              allLabel="Semua bandara"
+              options={options.stations.map((s) => ({ value: s, label: stationLabel(s, data.airports) }))}
+              className="flex-1 basis-40 sm:max-w-60"
+            />
+          )}
           <MultiSelect
             label="Jenis layanan"
             values={f.service}
@@ -272,6 +342,17 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
         aria-labelledby={`tab-${tab}`}
         className="mx-auto max-w-[1320px] px-4 pt-6 pb-16 sm:px-6 lg:px-8"
       >
+        {akses && (
+          <div className="mb-5 lg:mb-6">
+            <SamplingPanel
+              sampling={akses.sampling}
+              segment={tab}
+              stations={isCabang ? [akses.station ?? ""] : f.station}
+              airports={data.airports}
+              responses={segment.responses}
+            />
+          </div>
+        )}
         <SegmentView
           key={`${tab}-${JSON.stringify(f)}`}
           meta={meta}
@@ -286,7 +367,11 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
       <footer className="border-t border-line bg-card">
         <div className="mx-auto flex max-w-[1320px] flex-wrap justify-between gap-2 px-4 py-5 text-xs text-muted sm:px-6 lg:px-8">
           <span>PT Gapura Angkasa · Survei kepuasan pelanggan JOUMPA</span>
-          <span>Data diperbarui otomatis tiap 2 menit selama halaman terbuka</span>
+          <span>
+            {isCabang && akses?.expiresAt
+              ? `Link ini berlaku sampai ${formatDateTime(akses.expiresAt)} · data diperbarui otomatis tiap 2 menit`
+              : "Data diperbarui otomatis tiap 2 menit selama halaman terbuka"}
+          </span>
         </div>
       </footer>
 
@@ -300,8 +385,21 @@ export function Dashboard({ data, initialTab }: { data: DashboardData; initialTa
           onClose={closePresenting}
         />
       )}
-      <ShareDialog open={dialog === "share"} onClose={() => setDialog(null)} data={data} initialScope={currentScope} />
-      <ExportDialog open={dialog === "export"} onClose={() => setDialog(null)} data={data} initialScope={currentScope} />
+      {!akses && (
+        <>
+          <ShareDialog open={dialog === "share"} onClose={() => setDialog(null)} data={data} initialScope={currentScope} />
+          <ExportDialog open={dialog === "export"} onClose={() => setDialog(null)} data={data} initialScope={currentScope} />
+        </>
+      )}
+      {akses?.mode === "admin" && (
+        <LinkManager
+          open={dialog === "links"}
+          onClose={() => setDialog(null)}
+          initialLinks={akses.links ?? []}
+          stations={akses.stationOptions ?? []}
+          airports={data.airports}
+        />
+      )}
     </div>
   );
 }
