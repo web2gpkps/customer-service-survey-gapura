@@ -4,14 +4,16 @@ import { ADMIN_COOKIE, authSecret, verifySession } from "@/lib/session";
 /**
  * Semua halaman dan API dikunci untuk admin kecuali:
  * - /login
- * - /akses/<token>   halaman cabang; tokennya dicek di halaman itu sendiri
+ * - /cabang/<kode>   halaman cabang; kodenya dicek di halaman itu sendiri
+ * - /api/cabang-export/<kode>   export untuk pemegang link cabang; kodenya dicek di route itu sendiri
  * - /presentasi      laporan hanya-baca dari tombol Bagikan
  *
  * Pengecekan di sini hanya penjaga awal. Halaman dan server action admin tetap memanggil requireAdmin().
  */
 const isPublicPath = (p: string) =>
   p === "/login" ||
-  (p.startsWith("/akses/") && p.length > "/akses/".length) ||
+  (p.startsWith("/cabang/") && p.length > "/cabang/".length) ||
+  (p.startsWith("/api/cabang-export/") && p.length > "/api/cabang-export/".length) ||
   p === "/presentasi" ||
   p.startsWith("/presentasi/");
 
@@ -33,5 +35,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Lewati aset statis Next dan file di /public.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|logo-gapura\\.(?:png|webp)).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|logo-(?:gapura|joumpa)[\\w-]*\\.(?:png|webp)).*)"],
 };

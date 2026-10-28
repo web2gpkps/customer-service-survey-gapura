@@ -35,6 +35,7 @@ export interface SamplingData {
   fetchedAt: string;
   productionLabel: string; // judul kolom produksi di sheet, mis. "Produksi Sep"
   branches: Record<string, BranchSampling>;
+  error?: string;
 }
 
 let cache: { at: number; data: SamplingData } | null = null;
@@ -53,6 +54,16 @@ export async function getSamplingData(): Promise<SamplingData> {
   const data = parseSampling(rows);
   cache = { at: Date.now(), data };
   return data;
+}
+
+/** Data target untuk halaman yang menampilkannya. Gagal baca sheet tidak menjatuhkan dashboard. */
+export async function loadSampling(): Promise<SamplingData> {
+  try {
+    return await getSamplingData();
+  } catch (err) {
+    console.error("Gagal memuat sheet Target Sampling:", err);
+    return { fetchedAt: new Date().toISOString(), productionLabel: "Produksi", branches: {}, error: "Sheet Target Sampling belum bisa dimuat." };
+  }
 }
 
 /** "47" → 47, "–", "-" dan sel kosong → null. */

@@ -17,7 +17,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "JOUMPA CSS Survey Dashboard",
   description: "Index kepuasan pelanggan JOUMPA (B2C dan B2B), PT Gapura Angkasa",
-  icons: { icon: "/logo-gapura.png" },
+  icons: { icon: "/logo-joumpa-icon.png", apple: "/logo-joumpa-icon.png" },
 };
 
 export const viewport: Viewport = {

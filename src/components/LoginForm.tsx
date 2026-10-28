@@ -11,7 +11,7 @@ export function LoginForm({ next }: { next: string }) {
   return (
     <main className="grid min-h-dvh place-items-center px-4 py-12">
       <form action={action} className="card w-full max-w-sm p-7">
-        <Image src="/logo-gapura.webp" alt="Gapura Airport Services" width={1052} height={569} priority className="h-10 w-auto" />
+        <Image src="/logo-joumpa-header.webp" alt="JOUMPA Airport VIP Service" width={879} height={226} priority className="h-11 w-auto" />
         <p className="eyebrow mt-6">JOUMPA CSS Survey Dashboard</p>
         <h1 className="mt-1 text-xl font-extrabold tracking-tight text-ink">Masuk admin</h1>
         <p className="mt-2 text-sm text-muted">Halaman ini hanya untuk pengelola. Cabang membuka dashboardnya lewat link khusus.</p>

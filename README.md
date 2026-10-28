@@ -13,8 +13,8 @@ npm run build && npm start   # mode produksi
 | Halaman | Isi |
 |---|---|
 | `/` | Dashboard. Tab B2C terbuka duluan, tab B2B lewat `/?tab=b2b`. Perlu login admin. |
-| `/akses` | Share akses cabang (admin): dashboard yang sama plus target sampling semua cabang, dan tombol **Kelola link cabang**. |
-| `/akses/<token>` | Dashboard satu cabang dari link yang dibagikan. Tanpa login, hanya data cabang itu. |
+| `/akses-cabang` | Share Akses Cabang (admin): dashboard yang sama plus target sampling semua cabang, dan tombol **Bagikan akses cabang**. |
+| `/cabang/<kode>` | Halaman untuk cabang dari link yang dibagikan. Tanpa login; hanya halaman ini yang terbuka. |
 | `/login` | Login admin. |
 | `/presentasi` | Laporan satu halaman yang hanya bisa dibaca. Link-nya dibuat dari tombol **Bagikan**. |
 | `/api/export` | Unduh PDF (`format=pdf`) atau Excel (`format=xlsx`). |
@@ -28,12 +28,13 @@ Tombol **Bagikan** dan **Export** membuka pilihan yang sama: segmen (B2C, B2B, a
 
 ## Akses cabang
 
-Tombol **Share akses cabang** di sebelah **Bagikan** membuka `/akses`. Di sana Anda melihat target sampling per cabang (dari sheet `Target Sampling`) dan membuat link untuk tiap cabang lewat **Kelola link cabang**.
+Cara kerjanya sama dengan AIRLINE CSS Survey Dashboard. Tombol **Share Akses Cabang** di sebelah **Bagikan** membuka `/akses-cabang`. Klik **Bagikan akses cabang**, pilih masa berlaku (7, 30, 90 hari, atau tanpa batas), lalu **Buat link**. Link berbentuk `/cabang/<kode>` (kode acak 12 karakter) dan bisa disalin, dikirim lewat WhatsApp atau Email.
 
-- Link cabang hanya menampilkan dashboard dan target sampling cabang itu. Server hanya mengirim respons cabang tersebut, jadi cabang lain tidak ikut terkirim.
-- Pemegang link tidak bisa membuka halaman utama, export, atau `/akses`; semuanya meminta login admin.
-- Link bisa dimatikan, diaktifkan lagi, dan diberi masa berlaku (7, 30, 90 hari, atau tanpa batas). Perubahan berlaku dalam beberapa detik.
-- Daftar link disimpan di tab `Share Akses Cabang` pada spreadsheet yang sama. Tab dibuat otomatis saat link pertama dibuat. **Service account harus berstatus Editor** di spreadsheet (selain Viewer untuk membaca data).
+- Satu link berlaku untuk semua cabang. Penerima melihat dashboard dan target sampling (bisa difilter per bandara), tanpa tombol Export atau Bagikan.
+- Penerima tidak bisa membuka halaman utama, export, atau `/akses-cabang`; semuanya meminta login admin.
+- Link bisa **Putus** kapan saja. Link yang diputus atau kedaluwarsa bisa **Hapus** dari daftar, atau **Hapus semua yang tidak aktif**.
+- Penyimpanan: Upstash Redis (`UPSTASH_REDIS_REST_URL` dan `UPSTASH_REDIS_REST_TOKEN`, atau `KV_REST_API_URL` dan `KV_REST_API_TOKEN` dari Vercel Marketplace). Wajib di produksi. Lokal memakai berkas `.data/share-links.json`. Kunci di Redis berawalan `joumpa:`.
+- Tebakan kode salah dibatasi 20 kali per 10 menit per IP.
 
 ### Login admin
 

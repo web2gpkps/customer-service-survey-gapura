@@ -144,5 +144,5 @@ export function parseScope(sp: Record<string, string | string[] | undefined> | U
 
 export type ExportFormat = "pdf" | "pdf-slide" | "xlsx";
 
-export const exportUrl = (scope: ReportScope, format: ExportFormat) =>
-  `/api/export?format=${format}&${scopeToSearch(scope)}`;
+export const exportUrl = (scope: ReportScope, format: ExportFormat, base = "/api/export") =>
+  `${base}?format=${format}&${scopeToSearch(scope)}`;

@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // Token ada di URL: jangan bocor lewat Referer, jangan disimpan cache, jangan diindeks.
       {
-        source: "/akses/:path*",
+        source: "/cabang/:path*",
         headers: [
           { key: "Referrer-Policy", value: "no-referrer" },
           { key: "Cache-Control", value: "no-store, max-age=0" },
