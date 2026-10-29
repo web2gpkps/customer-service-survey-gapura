@@ -18,3 +18,6 @@ https*.txt
 
 # Link akses cabang (mode berkas lokal)
 /.data
+
+# Dokumen internal: semua .md di docs/ tidak boleh di-push ke GitHub
+docs/*.md
