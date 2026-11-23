@@ -12,13 +12,20 @@ export interface ShareLink {
   revokedAt?: string;
   /** Link berhenti berlaku setelah waktu ini; kosong = tanpa batas. */
   expiresAt?: string;
+  /** "cabang" (default; link lama tanpa kolom ini) = dashboard cabang; "laporan" = laporan hanya-baca dari tombol Bagikan. */
+  kind?: LinkKind;
+  /** Khusus "laporan": cakupan data yang terkunci di server (query string yang sudah dinormalkan). */
+  scope?: string;
 }
+
+export type LinkKind = "cabang" | "laporan";
+export const kindOf = (link: ShareLink): LinkKind => link.kind ?? "cabang";
 
 export const isExpired = (link: ShareLink, now = Date.now()) => !!link.expiresAt && Date.parse(link.expiresAt) <= now;
 export const isDead = (link: ShareLink, now = Date.now()) => !!link.revokedAt || isExpired(link, now);
 
 export const CODE_PATTERN = /^[A-Za-z0-9_-]{10,16}$/;
-const LIST_LIMIT = 200;
+const LIST_LIMIT = 500;
 // Awalan kunci supaya Redis yang sama bisa dipakai bersama proyek lain tanpa tercampur.
 const PREFIX = "joumpa:";
 
@@ -151,8 +158,13 @@ const remember = (link: ShareLink) => {
   if (lastKnown.size > 500) lastKnown.delete(lastKnown.keys().next().value as string);
 };
 
-export async function createLink(expiresAt?: string): Promise<ShareLink> {
-  const link: ShareLink = { code: randomBytes(9).toString("base64url"), createdAt: new Date().toISOString(), ...(expiresAt && { expiresAt }) };
+export async function createLink(expiresAt?: string, extra?: { kind: "laporan"; scope: string }): Promise<ShareLink> {
+  const link: ShareLink = {
+    code: randomBytes(9).toString("base64url"),
+    createdAt: new Date().toISOString(),
+    ...(expiresAt && { expiresAt }),
+    ...(extra && { kind: extra.kind, scope: extra.scope }),
+  };
   await getStore().create(link);
   remember(link);
   return link;
@@ -172,8 +184,8 @@ export async function getLink(code: string): Promise<ShareLink | null> {
   }
 }
 
-export async function listLinks(): Promise<ShareLink[]> {
-  return getStore().list();
+export async function listLinks(kind: LinkKind = "cabang"): Promise<ShareLink[]> {
+  return (await getStore().list()).filter((l) => kindOf(l) === kind);
 }
 
 export async function revokeLink(code: string): Promise<boolean> {
@@ -200,8 +212,8 @@ export async function deleteInactiveLink(code: string): Promise<boolean> {
   return true;
 }
 
-export async function deleteAllInactiveLinks(): Promise<number> {
+export async function deleteAllInactiveLinks(kind: LinkKind = "cabang"): Promise<number> {
   let removed = 0;
-  for (const l of (await listLinks()).filter((l) => isDead(l))) if (await deleteInactiveLink(l.code)) removed++;
+  for (const l of (await listLinks(kind)).filter((l) => isDead(l))) if (await deleteInactiveLink(l.code)) removed++;
   return removed;
 }

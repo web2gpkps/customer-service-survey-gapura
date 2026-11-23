@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { ArrowLeft, Download, LogOut, Presentation, RefreshCw, RotateCcw, Share2, Users } from "lucide-react";
+import { ArrowLeft, Download, ListChecks, LogOut, Presentation, RefreshCw, RotateCcw, Share2, Users } from "lucide-react";
 import { refreshData } from "@/app/actions";
 import { logout } from "@/app/login/actions";
 import {
@@ -181,6 +181,13 @@ export function Dashboard({ data, initialTab, akses }: { data: DashboardData; in
                   <Users aria-hidden className="size-4" />
                   <span className="hidden sm:inline">Share Akses Cabang</span>
                   <span className="sm:hidden">Akses cabang</span>
+                </Link>
+                <Link
+                  href="/tindak-lanjut"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-crit px-3.5 text-sm font-semibold text-white transition-colors hover:bg-crit/85"
+                >
+                  <ListChecks aria-hidden className="size-4" />
+                  Tindak Lanjut
                 </Link>
               </>
             )}

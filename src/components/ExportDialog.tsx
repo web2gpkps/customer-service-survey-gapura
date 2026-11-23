@@ -39,7 +39,18 @@ export function ExportDialog({
   );
 }
 
-export function ExportButtons({ scope, compact = false, base }: { scope: ReportScope; compact?: boolean; base?: string }) {
+export function ExportButtons({
+  scope,
+  compact = false,
+  base,
+  noExcel = false,
+}: {
+  scope: ReportScope;
+  compact?: boolean;
+  base?: string;
+  /** Link laporan tidak boleh mengunduh Excel (berisi salinan seluruh sheet). */
+  noExcel?: boolean;
+}) {
   const cls = compact
     ? "flex min-h-10 items-center gap-2.5 rounded-md px-3 text-sm font-semibold text-ink hover:bg-sunken"
     : "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-line-strong bg-card px-4 text-sm font-semibold text-ink hover:border-ink-2";
@@ -59,6 +70,7 @@ export function ExportButtons({ scope, compact = false, base }: { scope: ReportS
           <span className="ml-1.5 font-normal text-muted">landscape 16:9</span>
         </span>
       </a>
+      {!noExcel && (
       <a href={exportUrl(scope, "xlsx", base)} download className={cls}>
         <FileSpreadsheet aria-hidden className="size-4 text-good" />
         <span>
@@ -66,6 +78,7 @@ export function ExportButtons({ scope, compact = false, base }: { scope: ReportS
           <span className="ml-1.5 font-normal text-muted">sheet Tally + rekap</span>
         </span>
       </a>
+      )}
     </div>
   );
 }

@@ -45,6 +45,13 @@ export function getServiceAccount(): ServiceAccount {
   return { ...account, private_key: account.private_key.replace(/\\n/g, "\n") };
 }
 
+/** Sheet "Tracking Follow Up Index CSS JOUMPA" (terpisah dari sheet survei). Service account harus berstatus Editor di sini. */
+export function getTrackerSheetId(): string {
+  const id = process.env.TRACKER_SHEET_ID?.trim() || readRawEnvValue("TRACKER_SHEET_ID");
+  if (!id) throw new Error("TRACKER_SHEET_ID belum diatur di .env.");
+  return id;
+}
+
 export function getSheetId(): string {
   const fromEnv = process.env.GOOGLE_SHEET_ID?.trim();
   const id = fromEnv || readRawEnvValue("GOOGLE_SHEET_ID");

@@ -18,7 +18,7 @@ import { useAutoRefresh } from "./useAutoRefresh";
 const AUTO_REFRESH_MS = 5 * 60_000;
 
 /** Laporan satu halaman untuk link yang dibagikan. Hanya bisa dibaca, plus export. */
-export function Presentation({ data, query }: { data: DashboardData; query: ReportScope }) {
+export function Presentation({ data, query, exportBase }: { data: DashboardData; query: ReportScope; exportBase?: string }) {
   useAutoRefresh(AUTO_REFRESH_MS);
   const reports = useMemo(
     () => query.segments.map((seg) => buildSegmentReport(data, seg, query.filters[seg])),
@@ -48,7 +48,7 @@ export function Presentation({ data, query }: { data: DashboardData; query: Repo
             </nav>
           )}
           <span className="ml-auto hidden text-xs text-muted lg:inline">Data per {formatDateTime(data.fetchedAt)}</span>
-          <ExportMenu scope={query} />
+          <ExportMenu scope={query} base={exportBase} />
         </div>
       </header>
 
@@ -104,7 +104,7 @@ export function Presentation({ data, query }: { data: DashboardData; query: Repo
 
 /* ------------------------------------------------------------------ */
 
-function ExportMenu({ scope }: { scope: ReportScope }) {
+function ExportMenu({ scope, base }: { scope: ReportScope; base?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -134,7 +134,7 @@ function ExportMenu({ scope }: { scope: ReportScope }) {
       </button>
       {open && (
         <div role="menu" className="absolute right-0 mt-2 w-64 rounded-xl border border-line bg-card p-1.5 shadow-xl">
-          <ExportButtons scope={scope} compact />
+          <ExportButtons scope={scope} compact base={base} noExcel={!!base} />
         </div>
       )}
     </div>

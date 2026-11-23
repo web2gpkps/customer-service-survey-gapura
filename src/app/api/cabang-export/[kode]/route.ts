@@ -1,6 +1,6 @@
 import { buildExportResponse } from "@/lib/export/handler";
 import { clientIp, isGuessBlocked, recordMiss } from "@/lib/guess-limit";
-import { getLink, isDead } from "@/lib/share-store";
+import { getLink, isDead, kindOf } from "@/lib/share-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ kode
   } catch {
     return deny(503);
   }
-  if (!link || isDead(link)) {
+  if (!link || kindOf(link) !== "cabang" || isDead(link)) {
     recordMiss(ip);
     return deny(401);
   }

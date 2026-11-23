@@ -4,7 +4,7 @@ import { Dashboard } from "@/components/Dashboard";
 import { LoadError } from "@/components/LoadError";
 import { clientIp, isGuessBlocked, recordMiss } from "@/lib/guess-limit";
 import { loadSampling } from "@/lib/sampling";
-import { getLink, isDead } from "@/lib/share-store";
+import { getLink, isDead, kindOf } from "@/lib/share-store";
 import { getDashboardData, toClientData } from "@/lib/sheets";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +43,7 @@ export default async function BranchPage({ params }: { params: Promise<{ kode: s
   }
 
   // Link salah, diputus, atau kedaluwarsa menampilkan pesan yang sama.
-  if (!link || isDead(link)) {
+  if (!link || kindOf(link) !== "cabang" || isDead(link)) {
     recordMiss(ip);
     return <Notice title="Link ini tidak berlaku">Link sudah diputus, kedaluwarsa, atau tidak ditemukan. Minta link baru ke admin.</Notice>;
   }

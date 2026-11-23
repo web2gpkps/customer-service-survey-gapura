@@ -16,15 +16,17 @@ npm run build && npm start   # mode produksi
 | `/akses-cabang` | Share Akses Cabang (admin): dashboard yang sama plus target sampling semua cabang, dan tombol **Bagikan akses cabang**. |
 | `/cabang/<kode>` | Halaman untuk cabang dari link yang dibagikan. Tanpa login; hanya halaman ini yang terbuka. |
 | `/login` | Login admin. |
-| `/presentasi` | Laporan satu halaman yang hanya bisa dibaca. Link-nya dibuat dari tombol **Bagikan**. |
+| `/tindak-lanjut` | Tindak Lanjut feedback: kritik, saran, dan skor rendah dari penumpang dan mitra dipantau sampai selesai. Tiga tingkat password (lihat bagian **Tindak Lanjut**). |
+| `/p/<kode>` | Laporan satu halaman yang hanya bisa dibaca. Link-nya dibuat dari tombol **Bagikan**; bisa diputus dan punya masa berlaku. Tanpa login. |
 | `/api/export` | Unduh PDF (`format=pdf`) atau Excel (`format=xlsx`). |
 
-Tombol **Bagikan** dan **Export** membuka pilihan yang sama: segmen (B2C, B2B, atau keduanya), filter periode, bandara, dan jenis layanan per segmen, lalu konten yang disertakan. Pilihan itu tersimpan di URL, misalnya:
+Tombol **Bagikan** dan **Export** membuka pilihan yang sama: segmen (B2C, B2B, atau keduanya), filter periode, bandara, dan jenis layanan per segmen, lalu konten yang disertakan. Pilihan export tersimpan di URL, misalnya:
 
 ```
-/presentasi?segmen=b2c,b2b&b2b.bandara=CGK&konten=ringkasan,bagian
 /api/export?format=xlsx&segmen=b2c&b2c.periode=2026-09
 ```
+
+Tombol **Bagikan** membuat link `/p/<kode>` (kode acak 12 karakter) dengan mekanisme yang sama seperti link akses cabang: pilih masa berlaku (7, 30, 90 hari, atau tanpa batas), **Buat link**, lalu **Putus** kapan saja dan **Hapus** (atau **Hapus semua yang tidak aktif**) untuk link yang sudah mati. Pilihan data dikunci di server saat link dibuat, jadi penerima tidak bisa mengubah filter lewat URL. Penerima hanya bisa mengunduh PDF (tanpa Excel). Link disimpan di penyimpanan yang sama dengan link cabang.
 
 ## Akses cabang
 
@@ -38,9 +40,44 @@ Cara kerjanya sama dengan AIRLINE CSS Survey Dashboard. Tombol **Share Akses Cab
 
 ### Login admin
 
-Halaman utama, `/api/export`, dan `/akses` dikunci dengan password. Atur `ADMIN_PASSWORD` dan `AUTH_SECRET` di `.env` (dan di environment Vercel). Tanpa keduanya halaman admin tidak bisa dibuka. `/presentasi` dan link cabang tetap terbuka tanpa login.
+Halaman utama, `/api/export`, dan `/akses` dikunci dengan password. Atur `ADMIN_PASSWORD` dan `AUTH_SECRET` di `.env` (dan di environment Vercel). Tanpa keduanya halaman admin tidak bisa dibuka. Link laporan (`/p/<kode>`) dan link cabang tetap terbuka tanpa login selama kodenya masih berlaku.
 
 Dashboard mengambil ulang data tiap 2 menit selama halaman terbuka, laporan tiap 5 menit. Server menyimpan hasil ambil data selama 60 detik; tombol **Muat ulang** melewati simpanan itu.
+
+## Tindak Lanjut
+
+Tombol **Tindak Lanjut** di header membuka `/tindak-lanjut`. Halaman ini memantau semua jawaban yang perlu ditindaklanjuti sampai selesai. Datanya disimpan di Google Sheet **Tracking Follow Up Index CSS JOUMPA** (env `TRACKER_SHEET_ID`; tab `B2C`, `B2B`, `Rekap`), jadi tampilan web dan Sheet selalu sama. Sheet survei tetap hanya-baca; hanya sheet tracker yang ditulis, dan service account harus berstatus **Editor** di sana.
+
+**Tiga tingkat password**
+
+| Peran | Password | Bisa |
+|---|---|---|
+| Admin | `FOLLOWUP_ADMIN_PASSWORD` (atau `ADMIN_PASSWORD` dashboard utama) | Semua fitur menu ini; hanya `ADMIN_PASSWORD` yang juga membuka dashboard utama |
+| Management | `FOLLOWUP_MANAGER_PASSWORD` | Melihat dan mengisi (status, PIC, tindakan, target, klasifikasi) |
+| Lihat saja | `FOLLOWUP_VIEWER_PASSWORD` | Hanya melihat; penolakan juga dicek di server |
+
+Menu ini **selalu meminta password**, termasuk bagi yang sudah login admin di dashboard utama: sesi admin dashboard tidak otomatis membuka Tindak Lanjut. Setelah password benar, sesi menu berlaku 12 jam. Password admin menu ini (`FOLLOWUP_ADMIN_PASSWORD`) boleh berbeda dari password masuk dashboard utama (`ADMIN_PASSWORD`, tidak diubah) dan hanya membuka menu ini; memasukkan `ADMIN_PASSWORD` di sini juga diterima sebagai Admin dan membuka sesi dashboard utama. Ketiganya harus berbeda. Cookie Management dan Lihat saja ditandatangani dengan kunci turunan, jadi tidak pernah sah sebagai sesi admin.
+
+**Aturan otomatis** (kode di `src/lib/followup/classify.ts`, ditampilkan juga di halaman)
+
+- Perlu ditindaklanjuti bila: index jawaban di bawah 4,50 (rata-rata semua butir dari satu responden), menjawab pernah mengalami kendala atau teks berisi keluhan, skor rekomendasi 6 atau kurang, atau ada kritik atau saran di kolom teks.
+- Prioritas **Tinggi** (target 3 hari): kendala atau keluhan, skor rekomendasi 6 atau kurang, index di bawah 4,00, atau dua butir atau lebih bernilai 3 atau kurang. **Sedang** (14 hari): sisanya yang perlu ditindaklanjuti, termasuk satu butir bernilai 3 atau kurang. Rumus Target Selesai di sheet sama: tanggal survei + 3 atau 14 hari.
+- Selain itu dibaca **apresiasi** dan tampil di tab Apresiasi (belum masuk sheet). Bila salah baca, buka jawabannya lalu **Jadikan tindak lanjut**. Klasifikasi item yang sudah ada juga bisa diubah (bacaan awal sistem tersimpan di kolom `Klasifikasi Sistem`).
+
+**Kategori isu = bagian kuesioner**, sama dengan "Index per bagian layanan" (B2C: Reservasi, Keberangkatan, Transit / Transfer, Kedatangan, Penanganan kendala, Keamanan, Kepuasan keseluruhan; B2B: Reservasi & koordinasi, Operasional & SLA, Komunikasi real-time, Irregularity & komplain, Pelaporan & administrasi, Hubungan kemitraan; ditambah Lainnya). Sistem memilihnya dari: jawaban kendala atau keluhan (bagian penanganan kendala), lalu bagian dengan butir bernilai rendah terbanyak, lalu bagian dengan rata-rata skor terendah, dan untuk teks tanpa skor rendah dari kata kunci (kode di `src/lib/followup/sections.ts`). Dapat diubah lewat menu **Ubah Status Klasifikasi** di bagian atas panel item.
+
+**Upload Evidence.** Di panel item (Admin dan Management) ada menu lipat **Upload Evidence**: pilih Dokumen, Gambar, PPT, atau Excel (maksimal 5 berkas sekali simpan, 10 MB per berkas), isi judul per berkas, lalu **Simpan perubahan**. Selama unggahan berjalan tampil animasi memuat; setelah selesai muncul popup **Tindak Lanjut & Evidence tersimpan** (harus klik Oke), atau **Upload Evidence Gagal Tersimpan** dengan tombol **Upload Ulang**. Nama berkas di Drive: `ID_Tanggal_Bandara_Judul.ext`. Tautan berkas dicatat di kolom `Link Evidence` sheet tracker. Isi berkas diperiksa tanda tangannya (bukan sekadar ekstensi), tipe `exe`/makro ditolak. Berkas disimpan memakai akun Google pemilik lewat Apps Script Web App (`integrations/apps-script-evidence-upload.gs`, langkah pemasangan ada di berkas itu), bukan service account. Env: `EVIDENCE_UPLOAD_URL` dan `EVIDENCE_UPLOAD_TOKEN`.
+
+**Versi ringkas dan lengkap.** Daftar menampilkan ringkasan satu kalimat. Klik satu item untuk melihat jawaban asli langsung dari penumpang (nama, nomor HP, semua teks, butir bernilai rendah) dan formulir tindak lanjut. Email tidak ditampilkan karena formulir Tally tidak menanyakannya. Nama dan nomor HP hanya dimuat saat item dibuka dan tidak pernah ikut di data daftar, export, atau link bagikan.
+
+**Sinkronisasi otomatis, hemat kuota.** Tidak ada cron dan tidak ada polling berat.
+
+- Saat halaman dibuka dan lewat polling browser (tiap 60 detik, berhenti saat tab disembunyikan, balasan 304 bila tidak berubah), server menyinkronkan survei ke sheet tracker. Gerbang waktu membatasi satu kali per 60 detik untuk seluruh pengguna, dan satu kunci terdistribusi (Upstash) mencegah dua sinkronisasi berjalan bersamaan.
+- Sheet tracker terbarui hampir seketika lewat webhook: pasang `integrations/apps-script-webhook.gs` di sheet survei (langkahnya ada di berkas itu). Webhook dijaga token `FOLLOWUP_SYNC_TOKEN` dan dibatasi satu kali per 5 detik.
+- Satu putaran hanya 2 pembacaan dan, bila ada item baru, 3 sampai 4 penulisan berkelompok. Sinkronisasi hanya menambah baris dan menautkan ID respons; isian management tidak pernah ditimpa. Semua nilai ditulis dengan mode RAW sehingga teks responden tidak pernah menjadi rumus Sheets.
+- Sheet tracker memuat kolom tambahan `ID Respons`, `Klasifikasi Sistem`, `Diubah Oleh`, `Terakhir Diubah`, `Riwayat Perubahan`, `Catatan Sinkron`, `Link Evidence`. Penyimpanan kunci gerbang memakai Upstash yang sama dengan link cabang (awalan `joumpa:followup:`); tanpa Upstash (lokal) memakai memori proses.
+
+Opsional: `TRACKER_TAB_B2C`, `TRACKER_TAB_B2B`, `TRACKER_TAB_REKAP` mengganti nama tab tracker (dipakai untuk uji pada tab salinan).
 
 ## Isi file export
 

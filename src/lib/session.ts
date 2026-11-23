@@ -28,29 +28,34 @@ export function authSecret(): string | null {
 }
 
 /** Token = base64url(payload).base64url(tanda tangan). Payload memuat waktu kedaluwarsa `exp` (ms). */
-export async function signSession(payload: { exp: number }, secret: string): Promise<string> {
+export async function signSession(payload: { exp: number; [k: string]: unknown }, secret: string): Promise<string> {
   const body = toBase64Url(enc.encode(JSON.stringify(payload)));
   const sig = await crypto.subtle.sign("HMAC", await key(secret, "sign"), enc.encode(body));
   return `${body}.${toBase64Url(new Uint8Array(sig))}`;
 }
 
-export async function verifySession(token: string | undefined, secret: string): Promise<boolean> {
-  if (!token) return false;
+/** Mengembalikan isi token bila tanda tangan sah dan belum kedaluwarsa, selain itu null. */
+export async function readSession<T extends { exp: number }>(token: string | undefined, secret: string): Promise<T | null> {
+  if (!token) return null;
   const [body, sig, extra] = token.split(".");
-  if (!body || !sig || extra !== undefined) return false;
+  if (!body || !sig || extra !== undefined) return null;
   const sigBytes = fromBase64Url(sig);
-  if (!sigBytes) return false;
+  if (!sigBytes) return null;
   // crypto.subtle.verify membandingkan tanda tangan dengan waktu konstan.
   const ok = await crypto.subtle.verify("HMAC", await key(secret, "verify"), sigBytes, enc.encode(body));
-  if (!ok) return false;
+  if (!ok) return null;
   const bodyBytes = fromBase64Url(body);
-  if (!bodyBytes) return false;
+  if (!bodyBytes) return null;
   try {
-    const { exp } = JSON.parse(new TextDecoder().decode(bodyBytes)) as { exp?: number };
-    return typeof exp === "number" && exp > Date.now();
+    const payload = JSON.parse(new TextDecoder().decode(bodyBytes)) as T;
+    return typeof payload.exp === "number" && payload.exp > Date.now() ? payload : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export async function verifySession(token: string | undefined, secret: string): Promise<boolean> {
+  return (await readSession(token, secret)) !== null;
 }
 
 /** Bandingkan dua string tanpa bocor panjang kecocokan lewat waktu respons. */
