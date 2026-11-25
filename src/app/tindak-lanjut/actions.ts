@@ -2,9 +2,8 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ADMIN_COOKIE, ADMIN_SESSION_MS } from "@/lib/admin";
 import { buildCandidates, responseDetail, isIssueYes, type ResponseDetail } from "@/lib/followup/candidates";
-import { FOLLOWUP_COOKIE, FOLLOWUP_SESSION_MS, followupSecret, getRole, requireEditor, requireRole } from "@/lib/followup/auth";
+import { FOLLOWUP_COOKIE, FOLLOWUP_SESSION_MS, followupSecret, requireEditor, requireRole } from "@/lib/followup/auth";
 import { buildSummary } from "@/lib/followup/classify";
 import { syncTracker, toNewRow, type SyncStatus } from "@/lib/followup/sync";
 import {
@@ -44,13 +43,18 @@ const safeNext = (next: string) => (/^\/tindak-lanjut(?!\/\/)[\w\-./?=&%]*$/.tes
 export async function loginFollowup(_prev: LoginState, form: FormData): Promise<LoginState> {
   const secret = authSecret();
   const fSecret = followupSecret();
-  // Password dashboard utama (ADMIN_PASSWORD) dan password admin menu ini (FOLLOWUP_ADMIN_PASSWORD) boleh berbeda.
+  // ADMIN_PASSWORD hanya untuk masuk dashboard CSS JOUMPA. Menu ini punya tiga password sendiri, dan password yang sama
+  // dengan ADMIN_PASSWORD diabaikan: password dashboard tidak pernah membuka menu Tindak Lanjut.
   const dashboardPw = process.env.ADMIN_PASSWORD;
-  const followupAdminPw = process.env.FOLLOWUP_ADMIN_PASSWORD;
-  const managerPw = process.env.FOLLOWUP_MANAGER_PASSWORD;
-  const viewerPw = process.env.FOLLOWUP_VIEWER_PASSWORD;
-  if (!secret || !fSecret || !(dashboardPw || followupAdminPw)) {
-    return { error: "FOLLOWUP_ADMIN_PASSWORD (atau ADMIN_PASSWORD) dan AUTH_SECRET (minimal 16 karakter) belum diatur di environment server." };
+  const menuPw = (value: string | undefined) => (value && value !== dashboardPw ? value : undefined);
+  const adminPw = menuPw(process.env.FOLLOWUP_ADMIN_PASSWORD);
+  const managerPw = menuPw(process.env.FOLLOWUP_MANAGER_PASSWORD);
+  const viewerPw = menuPw(process.env.FOLLOWUP_VIEWER_PASSWORD);
+  if (!secret || !fSecret || !(adminPw || managerPw || viewerPw)) {
+    return {
+      error:
+        "Password menu belum diatur di environment server. FOLLOWUP_ADMIN_PASSWORD, FOLLOWUP_MANAGER_PASSWORD, dan FOLLOWUP_VIEWER_PASSWORD harus diisi dan berbeda dari ADMIN_PASSWORD (password dashboard).",
+    };
   }
 
   const ip = clientIp(await headers());
@@ -58,30 +62,24 @@ export async function loginFollowup(_prev: LoginState, form: FormData): Promise<
 
   const password = String(form.get("password") ?? "");
   // Semua password selalu dibandingkan (tanpa berhenti di yang cocok) supaya waktu respons tidak membocorkan jenisnya.
-  const [isDashboardPw, isFollowupAdminPw, isManagerPw, isViewerPw] = await Promise.all([
-    dashboardPw ? safeEqual(password, dashboardPw) : Promise.resolve(false),
-    followupAdminPw ? safeEqual(password, followupAdminPw) : Promise.resolve(false),
+  const [isAdminPw, isManagerPw, isViewerPw] = await Promise.all([
+    adminPw ? safeEqual(password, adminPw) : Promise.resolve(false),
     managerPw ? safeEqual(password, managerPw) : Promise.resolve(false),
     viewerPw ? safeEqual(password, viewerPw) : Promise.resolve(false),
   ]);
-  const isAdminPw = isDashboardPw || isFollowupAdminPw;
   if (!password || !(isAdminPw || isManagerPw || isViewerPw)) {
     recentFails(ip).push(Date.now());
     return { error: "Password salah." };
   }
 
-  const jar = await cookies();
-  const secure = process.env.NODE_ENV === "production";
   const role = isAdminPw ? "admin" : isManagerPw ? "manager" : "viewer";
-  jar.set(FOLLOWUP_COOKIE, await signSession({ exp: Date.now() + FOLLOWUP_SESSION_MS, role }, fSecret), {
-    httpOnly: true, sameSite: "lax", secure, path: "/", maxAge: FOLLOWUP_SESSION_MS / 1000,
+  (await cookies()).set(FOLLOWUP_COOKIE, await signSession({ exp: Date.now() + FOLLOWUP_SESSION_MS, role }, fSecret), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: FOLLOWUP_SESSION_MS / 1000,
   });
-  // Hanya password dashboard utama yang juga membuka sesi dashboard; password admin menu ini hanya membuka menu ini.
-  if (isDashboardPw) {
-    jar.set(ADMIN_COOKIE, await signSession({ exp: Date.now() + ADMIN_SESSION_MS }, secret), {
-      httpOnly: true, sameSite: "lax", secure, path: "/", maxAge: ADMIN_SESSION_MS / 1000,
-    });
-  }
   redirect(safeNext(String(form.get("next") ?? "/tindak-lanjut")));
 }
 

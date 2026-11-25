@@ -52,11 +52,11 @@ Tombol **Tindak Lanjut** di header membuka `/tindak-lanjut`. Halaman ini memanta
 
 | Peran | Password | Bisa |
 |---|---|---|
-| Admin | `FOLLOWUP_ADMIN_PASSWORD` (atau `ADMIN_PASSWORD` dashboard utama) | Semua fitur menu ini; hanya `ADMIN_PASSWORD` yang juga membuka dashboard utama |
+| Admin | `FOLLOWUP_ADMIN_PASSWORD` | Semua fitur menu ini |
 | Management | `FOLLOWUP_MANAGER_PASSWORD` | Melihat dan mengisi (status, PIC, tindakan, target, klasifikasi) |
 | Lihat saja | `FOLLOWUP_VIEWER_PASSWORD` | Hanya melihat; penolakan juga dicek di server |
 
-Menu ini **selalu meminta password**, termasuk bagi yang sudah login admin di dashboard utama: sesi admin dashboard tidak otomatis membuka Tindak Lanjut. Setelah password benar, sesi menu berlaku 12 jam. Password admin menu ini (`FOLLOWUP_ADMIN_PASSWORD`) boleh berbeda dari password masuk dashboard utama (`ADMIN_PASSWORD`, tidak diubah) dan hanya membuka menu ini; memasukkan `ADMIN_PASSWORD` di sini juga diterima sebagai Admin dan membuka sesi dashboard utama. Ketiganya harus berbeda. Cookie Management dan Lihat saja ditandatangani dengan kunci turunan, jadi tidak pernah sah sebagai sesi admin.
+Menu ini **selalu meminta password**, termasuk bagi yang sudah login admin di dashboard utama: sesi admin dashboard tidak otomatis membuka Tindak Lanjut. Setelah password benar, sesi menu berlaku 12 jam. Password dashboard CSS JOUMPA (`ADMIN_PASSWORD`) **tidak** bisa membuka menu ini, dan tiga password menu tidak bisa membuka dashboard. Ketiga password menu harus berbeda satu sama lain dan dari `ADMIN_PASSWORD`; password menu yang sama dengan `ADMIN_PASSWORD` diabaikan oleh server. Cookie Management dan Lihat saja ditandatangani dengan kunci turunan, jadi tidak pernah sah sebagai sesi admin.
 
 **Aturan otomatis** (kode di `src/lib/followup/classify.ts`, ditampilkan juga di halaman)
 
